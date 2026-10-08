@@ -1,57 +1,252 @@
-import requests
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>선형 검색 알고리즘 시각화</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Custom transitions for array boxes */
+        .array-box {
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 p-4 md:p-8 flex justify-center items-start">
 
-NOTION_TOKEN = "secret_YOUR_NOTION_INTEGRATION_TOKEN"
-DATABASE_ID = "YOUR_DATABASE_ID"
+    <div class="max-w-3xl w-full bg-white rounded-2xl shadow-xl p-6 md:p-10 space-y-8 border border-slate-100">
+        
+        <!-- Header Section -->
+        <div class="border-b border-slate-100 pb-4">
+            <h1 class="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">선형 검색 알고리즘 시각화</h1>
+        </div>
 
-headers = {
-    "Authorization": f"Bearer {NOTION_TOKEN}",
-    "Content-Type": "application/json",
-    "Notion-Version": "2022-06-28"  # 최신 API 버전
-}
+        <!-- Status Alert Box -->
+        <div id="statusBox" class="p-4 rounded-xl border-l-4 border-blue-500 bg-blue-50 text-blue-900 transition-all duration-300">
+            <p id="statusText" class="font-medium text-sm md:text-base">
+                상태: 검색을 시작할 준비가 되었습니다. '검색 시작' 또는 '다음 단계' 버튼을 누르세요.
+            </p>
+        </div>
 
-# 1. Create (페이지/데이터 생성)
-def create_page(title_text):
-    url = "https://api.notion.com/v1/pages"
-    payload = {
-        "parent": {"database_id": DATABASE_ID},
-        "properties": {
-            "Title": {  # 데이터베이스의 제목 컬럼 이름에 맞게 수정
-                "title": [
-                    {"text": {"content": title_text}}
-                ]
+        <!-- Algorithm Complexity Section -->
+        <div class="text-sm md:text-base text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-200/60 flex flex-wrap gap-x-4 gap-y-1">
+            <span class="font-semibold text-slate-700">알고리즘 복잡도:</span>
+            <span>시간 복잡도 : <strong class="text-slate-900 font-mono">O(N)</strong></span>
+            <span class="text-slate-300">|</span>
+            <span>공간 복잡도 : <strong class="text-slate-900 font-mono">O(1)</strong></span>
+        </div>
+
+        <!-- Controls Input Section -->
+        <div class="bg-slate-50/80 p-5 rounded-xl border border-slate-200/80 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="arrayInput" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">배열 (쉼표로 구분)</label>
+                    <input type="text" id="arrayInput" value="12, 34, 56, 78, 90, 23" class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-slate-800 font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white" placeholder="예: 12, 34, 56">
+                </div>
+                <div>
+                    <label for="targetInput" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">찾을 값</label>
+                    <input type="number" id="targetInput" value="78" class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-slate-800 font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white" placeholder="예: 78">
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-3 pt-2">
+                <button id="startBtn" onclick="startFullSearch()" class="flex-1 min-w-[140px] px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition active:scale-[0.98] flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    서버 요청
+                </button>
+                <button id="stepBtn" onclick="nextStep()" class="flex-1 min-w-[140px] px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium rounded-lg shadow-sm transition active:scale-[0.98] flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                    다음 단계
+                </button>
+                <button onclick="resetSearch()" class="px-4 py-2.5 border border-slate-300 hover:bg-slate-100 text-slate-600 font-medium rounded-lg transition">
+                    초기화
+                </button>
+            </div>
+        </div>
+
+        <!-- Shape Visualizer Section -->
+        <div>
+            <h2 class="text-lg font-bold text-slate-800 mb-3">도형 시각화 영역</h2>
+            <div id="visualizerContainer" class="flex flex-wrap gap-3 p-6 bg-slate-50/50 rounded-xl border border-slate-200/80 min-h-[120px] items-center justify-start overflow-x-auto">
+                <!-- Visual array elements will be dynamically generated here -->
+            </div>
+        </div>
+
+        <!-- Console Log Output Section -->
+        <div>
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-lg font-bold text-slate-800">결과출력 (로그)</h2>
+                <span class="text-xs font-mono text-slate-400">Terminal</span>
+            </div>
+            <div id="consoleLog" class="bg-[#2d3748] text-slate-100 p-5 rounded-xl font-mono text-xs md:text-sm leading-relaxed h-52 overflow-y-auto shadow-inner border border-slate-700">
+                <div class="text-slate-400">// 준비 상태: 검색 버튼을 클릭하세요.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Logic Section -->
+    <script>
+        let array = [12, 34, 56, 78, 90, 23];
+        let target = 78;
+        let currentIndex = -1;
+        let isSearching = false;
+        let isFinished = false;
+
+        // Initialize state on page load
+        window.onload = function() {
+            resetSearch();
+        };
+
+        // Reset or initialize state and array display
+        function resetSearch() {
+            const rawArrayInput = document.getElementById('arrayInput').value;
+            const rawTargetInput = document.getElementById('targetInput').value;
+
+            array = rawArrayInput.split(',').map(item => parseInt(item.trim())).filter(item => !isNaN(item));
+            target = parseInt(rawTargetInput);
+
+            if (isNaN(target)) {
+                target = 0;
+            }
+
+            currentIndex = -1;
+            isSearching = false;
+            isFinished = false;
+
+            updateStatus('대기 중: 검색 실행 준비가 되었습니다.', 'blue');
+            renderArrayVisualizer();
+            
+            const consoleLog = document.getElementById('consoleLog');
+            consoleLog.innerHTML = `<div class="text-slate-400">// 검색 입력값 초기화됨. (배열: [${array.join(', ')}], 목표값: ${target})</div>`;
+        }
+
+        // Render array elements visually
+        function renderArrayVisualizer() {
+            const container = document.getElementById('visualizerContainer');
+            container.innerHTML = '';
+
+            array.forEach((val, idx) => {
+                const boxWrapper = document.createElement('div');
+                boxWrapper.className = 'flex flex-col items-center space-y-1.5';
+
+                const box = document.createElement('div');
+                box.id = `array-box-${idx}`;
+                
+                // Base styles
+                let bgStyle = 'bg-white border-slate-200 text-slate-700 shadow-sm';
+                
+                if (idx === currentIndex) {
+                    if (val === target) {
+                        // Match found (Green)
+                        bgStyle = 'bg-emerald-500 border-emerald-600 text-white font-bold scale-105 shadow-md';
+                    } else {
+                        // Searching current index (Yellow/Amber)
+                        bgStyle = 'bg-amber-400 border-amber-500 text-slate-900 font-bold scale-105 shadow-md';
+                    }
+                } else if (idx < currentIndex) {
+                    // Passed indices
+                    bgStyle = 'bg-slate-100 border-slate-200 text-slate-400';
+                }
+
+                box.className = `array-box w-14 h-14 md:w-16 md:h-16 flex items-center justify-center rounded-xl border-2 text-lg md:text-xl ${bgStyle}`;
+                box.innerText = val;
+
+                const label = document.createElement('span');
+                label.className = 'text-xs font-mono text-slate-400';
+                label.innerText = `idx ${idx}`;
+
+                boxWrapper.appendChild(box);
+                boxWrapper.appendChild(label);
+                container.appendChild(boxWrapper);
+            });
+        }
+
+        // Update top status notification banner
+        function updateStatus(message, type = 'blue') {
+            const statusBox = document.getElementById('statusBox');
+            const statusText = document.getElementById('statusText');
+            statusText.innerText = message;
+
+            if (type === 'success') {
+                statusBox.className = 'p-4 rounded-xl border-l-4 border-emerald-500 bg-emerald-50 text-emerald-900 transition-all duration-300';
+            } else if (type === 'fail') {
+                statusBox.className = 'p-4 rounded-xl border-l-4 border-rose-500 bg-rose-50 text-rose-900 transition-all duration-300';
+            } else {
+                statusBox.className = 'p-4 rounded-xl border-l-4 border-blue-500 bg-blue-50 text-blue-900 transition-all duration-300';
             }
         }
-    }
-    response = requests.post(url, json=payload, headers=headers)
-    return response.json()
 
-# 2. Read (데이터베이스 조회)
-def read_database():
-    url = f"https://api.notion.com/v1/databases/{DATABASE_ID}/query"
-    response = requests.post(url, headers=headers)
-    return response.json()
+        // Execute a single step in the linear search algorithm
+        function nextStep() {
+            if (isFinished) {
+                resetSearch();
+            }
 
-# 3. Update (페이지/데이터 수정)
-def update_page(page_id, new_title):
-    url = f"https://api.notion.com/v1/pages/{page_id}"
-    payload = {
-        "properties": {
-            "Title": {
-                "title": [
-                    {"text": {"content": new_title}}
-                ]
+            // Input check
+            if (array.length === 0) {
+                updateStatus('오류: 올바른 배열 요소를 입력해 주세요.', 'fail');
+                return;
+            }
+
+            if (currentIndex === -1) {
+                // First step starting
+                const consoleLog = document.getElementById('consoleLog');
+                consoleLog.innerHTML = `<div class="text-amber-300 font-semibold">[서버 요청 성공]</div>`;
+                appendConsoleLog(`목표값: ${target}`);
+            }
+
+            currentIndex++;
+
+            if (currentIndex < array.length) {
+                const currentVal = array[currentIndex];
+                renderArrayVisualizer();
+
+                appendConsoleLog(`[단계 ${currentIndex + 1}] 인덱스 [${currentIndex}]의 값[${currentVal}]과 목표값[${target}]을 비교합니다.`);
+
+                if (currentVal === target) {
+                    // Value found!
+                    isFinished = true;
+                    updateStatus(`상태: 성공! 인덱스 ${currentIndex}에서 값 ${target}을(를) 찾았습니다.`, 'success');
+                    appendConsoleLog(`--> 검색 성공! 총 단계 수: ${currentIndex + 1}단계`);
+                } else {
+                    updateStatus(`상태: 인덱스 ${currentIndex} (값: ${currentVal}) 검사 중...`, 'blue');
+                    if (currentIndex === array.length - 1) {
+                        // End of array without finding
+                        isFinished = true;
+                        updateStatus(`상태: 실패! 값 ${target}을(를) 찾을 수 없습니다.`, 'fail');
+                        appendConsoleLog(`--> 검색 실패: 모든 요소를 확인했으나 값 ${target}이(가) 없습니다.`);
+                    }
+                }
             }
         }
-    }
-    response = requests.patch(url, json=payload, headers=headers)
-    return response.json()
 
-# 4. Delete (페이지 보관/삭제 처리)
-# 노션 API는 물리적 완전 삭제 대신 'archived: true'로 삭제 처리합니다.
-def delete_page(page_id):
-    url = f"https://api.notion.com/v1/pages/{page_id}"
-    payload = {
-        "archived": True
-    }
-    response = requests.patch(url, json=payload, headers=headers)
-    return response.json()
+        // Automatically run full search step by step with interval
+        function startFullSearch() {
+            resetSearch();
+            
+            const timer = setInterval(() => {
+                nextStep();
+                if (isFinished) {
+                    clearInterval(timer);
+                }
+            }, 600);
+        }
+
+        // Append log line to console output box
+        function appendConsoleLog(text) {
+            const consoleLog = document.getElementById('consoleLog');
+            const logLine = document.createElement('div');
+            logLine.innerText = text;
+            consoleLog.appendChild(logLine);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+    </script>
+</body>
+</html>
